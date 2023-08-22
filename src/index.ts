@@ -12,7 +12,7 @@ const baseUrl: string = 'https://qvapay.com/api';
 dotenv.config();
 
 const app: Express = express();
-const port = process.env.PORT;
+const port = process.env.PORT  ?? 8080;
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Bienvenido al Bot de Ofertas P2P de Qvapay (no oficial)');
