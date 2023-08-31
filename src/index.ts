@@ -4,39 +4,13 @@ import { ApiQvapay } from "./services/api-qvapay";
 import { ErrorResponse, SuccessfullLogin } from "./interfaces/login";
 import { TelegramBot } from "./services/bot";
 import { Oferta } from "./interfaces/ofertas";
-import { FicheroConfiguracion } from "./services/fichero-configuracion";
-import { log } from "console";
 
-const baseUrl: string = 'https://qvapay.com/api';
 
-dotenv.config();
+const sequelize = require("./database/database");
+const User = require("./database/models/users.model");
+const Umbral = require("./database/models/umbrales.model");
 
-const app: Express = express();
-const port = process.env.PORT  ?? 8080;
-
-app.get('/', (req: Request, res: Response) => {
-  res.send('Bienvenido al Bot de Ofertas P2P de Qvapay (no oficial)');
-});
-
-app.listen(port, () => {
-  console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
-});
-
-const api = new ApiQvapay(baseUrl);
-const email: string = <string> process.env.QVAPAY_USER;
-const password: string = <string> process.env.QVAPAY_PASSWORD;
-const telegramApiKey = <string> process.env.TELEGRAM_APIKEY;
-
-const telegramBot = new TelegramBot(telegramApiKey);
-
-telegramBot.setCommands(
-  [
-    { command: "start", description: "Iniciar el bot" },
-    { command: "stop", description: "Detener el bot" },
-    { command: "config", description: "Configurar prámetros" },
-    { command: "get", description: "Leer configuración" },
-  ]
-);
+const { obtenerUsuariosActivos } = require('./database/services/user.service');
 
 async function main() {
 
@@ -58,6 +32,15 @@ async function main() {
   procesarOfertas(ofertas);
 }
 
+async function testDbConection(){
+  try {
+    await sequelize.authenticate();
+    console.log('Connection has been established successfully.');
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+  }
+}
+
 export async function procesarOfertas (ofertas: Oferta[]) {
   function filtrarOfertas(this: { config: Record<string, any> }, oferta: Oferta) {
     const { config } = this;
@@ -69,29 +52,72 @@ export async function procesarOfertas (ofertas: Oferta[]) {
     }
     
     // Verificar el umbral de acuerdo a la operación
-    if (type === 'sell' && ratio > config[coin][type]) {
+    if (type === 'sell' && !isNaN(config[coin][type]) && ratio > config[coin][type]) {
         return false;
     }
     
-    if (type === 'buy' && ratio < config[coin][type]) {
+    if (type === 'buy' && !isNaN(config[coin][type]) && ratio < config[coin][type]) {
         return false;
     }
 
     return true;
   }
-  const fichero = new FicheroConfiguracion();
 
-  const configuracionUsuarios = fichero.leerDatos();
-    if(Object.keys(configuracionUsuarios).length !== 0)
-        Object.keys(configuracionUsuarios).forEach(id => {
-            const config = configuracionUsuarios[id];
+  obtenerUsuariosActivos()
+    .then((usuarios: any)=>{
+      if(!usuarios.length)
+        return;
 
-            const ofertasFiltradas = ofertas.filter(filtrarOfertas, {config});
-            //Recorre las ofertas y envia una notificacion por cada una.
-            ofertasFiltradas.forEach(oferta => telegramBot.enviarNotificacionOfertas(Number(id), oferta))
-            
-        })
+      usuarios.forEach((usuario: any) => {
+        const umbrales = usuario['Umbrals'];
+        const { id } = usuario;
+        const config: any = {};
+
+        umbrales.forEach((umbral: any) => {
+          const { moneda, venta, compra, UserId} = umbral;
+          config[moneda] = {};   
+          config[moneda]['sell'] = parseFloat(venta);
+          config[moneda]['buy'] = parseFloat(compra);
+          
+        });
+        const ofertasFiltradas = ofertas.filter(filtrarOfertas, {config});
+        ofertasFiltradas.forEach(oferta => telegramBot.enviarNotificacionOfertas(id, oferta))
+      });
+    })
+    .catch((err: any)=>{
+      console.log(err);
+      
+    })  
+
 }
+
+
+dotenv.config();
+
+const baseUrl: string = 'https://qvapay.com/api';
+const api = new ApiQvapay(baseUrl);
+const email: string = <string> process.env.QVAPAY_USER;
+const password: string = <string> process.env.QVAPAY_PASSWORD;
+const telegramApiKey = <string> process.env.TELEGRAM_APIKEY;
+
+const app: Express = express();
+const port = process.env.PORT  ?? 8080;
+
+app.get('/', (req: Request, res: Response) => {
+  res.send('Bienvenido al Bot de Ofertas P2P de Qvapay (no oficial)');
+});
+
+app.listen(port, () => {
+  console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
+});
+
+testDbConection();
+
+User.hasMany(Umbral);
+Umbral.belongsTo(User);
+
+sequelize.sync({alter: true});
+const telegramBot = new TelegramBot(telegramApiKey);
 
 main();
 setInterval(main, 3 * 60 * 1000);
