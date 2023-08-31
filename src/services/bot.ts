@@ -51,8 +51,8 @@ export class TelegramBot {
         username, 
         activo: true,
         umbrales: [
-          { moneda: 'BANK_CUP', venta: 240, compra: null, activo: true },
-          { moneda: 'BANK_MLC', venta: 1.11, compra: null, activo: true }
+          { moneda: 'BANK_CUP', venta: 235, compra: null},
+          { moneda: 'BANK_MLC', venta: 1.11, compra: null}
         ]
       };
 
@@ -99,7 +99,6 @@ export class TelegramBot {
                Moneda: ${umbral.moneda}
                Venta: ${umbral.venta}, 
                Compra: ${umbral.compra}, 
-               Activo: ${umbral.activo}  
                `)
               })
           this.bot.api.sendMessage(

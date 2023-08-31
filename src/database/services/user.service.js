@@ -25,7 +25,6 @@ async function actualizarCrearUsuario(id, defaultConfig) {
         moneda: umbral.moneda, 
         venta: umbral.venta, 
         compra: umbral.compra, 
-        activo: true
       }
     }))
   
@@ -73,9 +72,8 @@ async function obtenerUmbralesUsuario(id) {
 async function actualizarUmbralUsuario(id, valoresUmbral) {
   try {
     const {moneda, venta, compra} = valoresUmbral;
-    const activo = !(isNaN(venta) && isNaN(compra));
     
-    return await Umbral.update({venta: isNaN(venta) ? null : venta, compra: isNaN(compra) ? null : compra, activo}, { where: { [Op.and]: {UserId: id, moneda}}})
+    return await Umbral.update({venta: isNaN(venta) ? null : venta, compra: isNaN(compra) ? null : compra}, { where: { [Op.and]: {UserId: id, moneda}}})
     
   } catch (error) {
     console.log(error);  
