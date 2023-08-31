@@ -4,11 +4,13 @@ import { ApiQvapay } from "./services/api-qvapay";
 import { ErrorResponse, SuccessfullLogin } from "./interfaces/login";
 import { TelegramBot } from "./services/bot";
 import { Oferta } from "./interfaces/ofertas";
-import { FicheroConfiguracion } from "./services/fichero-configuracion";
-import User from "./models/users.model";
-import Umbral from "./models/umbrales.model";
+
 
 const sequelize = require("./database/database");
+const User = require("./database/models/users.model");
+const Umbral = require("./database/models/umbrales.model");
+
+const { obtenerUsuariosActivos } = require('./database/services/user.service');
 
 async function main() {
 
@@ -50,28 +52,43 @@ export async function procesarOfertas (ofertas: Oferta[]) {
     }
     
     // Verificar el umbral de acuerdo a la operación
-    if (type === 'sell' && ratio > config[coin][type]) {
+    if (type === 'sell' && !isNaN(config[coin][type]) && ratio > config[coin][type]) {
         return false;
     }
     
-    if (type === 'buy' && ratio < config[coin][type]) {
+    if (type === 'buy' && !isNaN(config[coin][type]) && ratio < config[coin][type]) {
         return false;
     }
 
     return true;
   }
-  const fichero = new FicheroConfiguracion();
 
-  const configuracionUsuarios = fichero.leerDatos();
-    if(Object.keys(configuracionUsuarios).length !== 0)
-        Object.keys(configuracionUsuarios).forEach(id => {
-            const config = configuracionUsuarios[id];
+  obtenerUsuariosActivos()
+    .then((usuarios: any)=>{
+      if(!usuarios.length)
+        return;
 
-            const ofertasFiltradas = ofertas.filter(filtrarOfertas, {config});
-            //Recorre las ofertas y envia una notificacion por cada una.
-            ofertasFiltradas.forEach(oferta => telegramBot.enviarNotificacionOfertas(Number(id), oferta))
-            
-        })
+      usuarios.forEach((usuario: any) => {
+        const umbrales = usuario['Umbrals'];
+        const { id } = usuario;
+        const config: any = {};
+
+        umbrales.forEach((umbral: any) => {
+          const { moneda, venta, compra, UserId} = umbral;
+          config[moneda] = {};   
+          config[moneda]['sell'] = parseFloat(venta);
+          config[moneda]['buy'] = parseFloat(compra);
+          
+        });
+        const ofertasFiltradas = ofertas.filter(filtrarOfertas, {config});
+        ofertasFiltradas.forEach(oferta => telegramBot.enviarNotificacionOfertas(id, oferta))
+      });
+    })
+    .catch((err: any)=>{
+      console.log(err);
+      
+    })  
+
 }
 
 
@@ -95,13 +112,11 @@ app.listen(port, () => {
 });
 
 testDbConection();
-User.inicialize(sequelize);
-Umbral.inicialize(sequelize);
 
-User.asociateModels();
-Umbral.asociateModels();
+User.hasMany(Umbral);
+Umbral.belongsTo(User);
 
-sequelize.sync();
+sequelize.sync({alter: true});
 const telegramBot = new TelegramBot(telegramApiKey);
 
 main();

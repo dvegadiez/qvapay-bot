@@ -1,19 +1,18 @@
 import { Bot } from "grammy";
-import { FicheroConfiguracion } from "./fichero-configuracion";
 import { Oferta } from "../interfaces/ofertas";
-import userRespository from "../repositories/user.respository";
-import { UserAtributos } from "../interfaces/user.interface";
+import { User } from "grammy/types";
+import { error } from "console";
+
+const { actualizarCrearUsuario, cambiarEstadoUsuario, obtenerUmbralesUsuario, actualizarUmbralUsuario } = require('./../database/services/user.service');
 
 export class TelegramBot {
   token: string;
   bot: Bot;
-  fichero: FicheroConfiguracion;
 
   constructor(token: string) {
 
     this.token = token;
     this.bot = new Bot(token);
-    this.fichero = new FicheroConfiguracion();
 
     this.setCommands([
       { command: "start", description: "Iniciar el bot" },
@@ -27,7 +26,7 @@ export class TelegramBot {
 
   esMensajeConfiguracionValido(msg: string) {
     // Definimos la expresión regular para validar el formato
-    const patron = /^(BANK_CUP|BANK_MLC):(sell|buy):[0-9]+(\.[0-9]+)?$/;
+    const patron = /^(BANK_CUP|BANK_MLC):(null|[0-9]+(\.[0-9]+)?):((null|[0-9]+(\.[0-9]+)?))$/;
 
     // Verificamos si la msg coincide con el patrón
     return patron.test(msg);
@@ -42,74 +41,76 @@ export class TelegramBot {
       const { first_name, last_name, username } = ctx.update.message!.from;
       
       const palabraSecreta = ctx.match;
-      if (palabraSecreta === process.env.BOT_SHARED_KEY) {
-        const defaultUserConfig: UserAtributos = {
-          id, first_name, 
-          last_name, 
-          username, 
-          activo: true,
-          umbrales: [
-            { moneda: 'BANK_CUP', venta: 250, compra: null, activo: true, userId: id },
-            { moneda: 'BANK_MLC', venta: 1.13, compra: null, activo: true, userId: id }
-          ]
-        };
-
-      
-        // userRespository.encontrarCrearUsuario(id, defaultUserConfig)
-        // .then(([usuario, creado]) =>{
-        //   return creado ? new Promise(()=> {}) : userRespository.actualizarEstadoUsuario(id, true)
-        // })
-        // .then(()=> {
-        //   console.log(`Usuario @${username} creado o activado correctamente`)
-        //   this.bot.api.sendMessage(
-        //     id,
-        //     `Bienvenido @${username}, al Bot de notificaciones de ofertas p2p Qvapay`
-        //   );
-        // })
-        // .catch((error)=> console.log(`Error al adicionar o activar usuario. ${error}`));
+      if (palabraSecreta !== process.env.BOT_SHARED_KEY) {
+        return;
       }
+
+      const defaultUserConfig = {
+        id, first_name, 
+        last_name, 
+        username, 
+        activo: true,
+        umbrales: [
+          { moneda: 'BANK_CUP', venta: 240, compra: null, activo: true },
+          { moneda: 'BANK_MLC', venta: 1.11, compra: null, activo: true }
+        ]
+      };
+
+      actualizarCrearUsuario(id, defaultUserConfig)
+        .then((data: any) =>{
+          console.log(`Usuario ${ data.firstName }(${data.id}) activado con éxito.`);
+          this.bot.api.sendMessage(id, `Bienvenido ${data.firstName}, al bot de notificaciones de ofertas P2P de Qvapay (No oficial).`);
+        })
+        .catch((err: any)=>{
+          console.log(err);
+        })
     });
 
-    // Borrar el id del chat al recibir el comando /stop
+    // Desactiva el id del usuario al recibir el comando /stop
     this.bot.command("stop", (ctx) => {
       const { id } = ctx.chat;
-      const { username } = ctx.update.message!.from;
+      const { first_name, last_name, username } = ctx.update.message!.from;
 
-      userRespository.actualizarEstadoUsuario(id, false)
-        .then((usuariosActualizados)=> {
-          this.bot.api.sendMessage(id, "Bye, Bye");
-          console.log(`Usuario @${username} desactivado correctamente`)
-        })
-        .catch((error)=> console.log(`Error al desactivar usuario: ${error}`))
+      cambiarEstadoUsuario(id, false).then((data: any)=>{
+        console.log(`Usuario ${ first_name }(${id}), deshabilitado con éxito`)
+        
+        if(data){
+          this.bot.api.sendMessage(id, `Bye Bye, ${ first_name }`);
+        }         
+      })
+      .catch((err: any)=>{
+        console.log(err);
+        
+      })
     });
 
-    // this.bot.command("get", (ctx) => {
-    //   const { id } = ctx.chat;
+    this.bot.command("get", (ctx) => {
+      const { id } = ctx.chat;
 
-    //   userRespository.obtenerUsuarioPorId(id)
-    //   .then((usuarioEncontrado) => {
-    //       let mensaje = '';
-    //       if(usuarioEncontrado){
-    //         const umbrales = usuarioEncontrado.;
-    //         umbrales?.forEach((umbral: UmbralesAtributos) =>{
-    //           mensaje = mensaje.concat(
-    //             `Moneda: ${umbral.moneda}
-    //             Venta: ${umbral.venta}, 
-    //             Compra: ${umbral.compra}, 
-    //             Activo: ${umbral.activo}
-                
-    //             `)
-    //         })
-    //       }
-    //       this.bot.api.sendMessage(
-    //         id,
-    //         usuarioEncontrado
-    //           ? mensaje
-    //           : "Configuración de usuario no encontrada. Debe iniciar el bot!!!"
-    //       );
-    //     })
-    //   .catch((error)=> console.log(`Error al leer la configuración de usuario: ${error}`))
-    // });
+      obtenerUmbralesUsuario(id)
+        .then((data: any)=>{
+          
+          const umbrales = data['Umbrals'];
+          let mensaje = '';
+
+          umbrales?.forEach((umbral: any) =>{
+            mensaje = mensaje.concat(
+              `
+               Moneda: ${umbral.moneda}
+               Venta: ${umbral.venta}, 
+               Compra: ${umbral.compra}, 
+               Activo: ${umbral.activo}  
+               `)
+              })
+          this.bot.api.sendMessage(
+            id,
+            umbrales
+              ? mensaje
+              : "Configuración de usuario no encontrada. Debe iniciar el bot!!!"
+          );
+        })
+        .catch((error: any)=> console.log(`Error al leer la configuración de usuario: ${error}`))
+    });
 
     this.bot.command("config", (ctx) => {
       const { id } = ctx.chat;
@@ -117,11 +118,16 @@ export class TelegramBot {
 
       if (!palabraConfiguracion) {
         ctx.reply(
-          "Para configurar los umbrales del bot, envía argumentos al comando con el siguiente formato:"
+          `Para configurar los umbrales del bot, envía argumentos al comando con el siguiente formato:
+          /config BANK_MLC:venta:compra
+          Envía null si no quieres recibir notificaciones del alguna operación
+          `
         );
         ctx.reply(`
-        /config BANK_MLC:sell:1.15
-        /config BANK_CUP:buy:215.00
+        /config BANK_MLC:1.10:null
+        `);
+        ctx.reply(`
+        /config BANK_CUP:235.00:215.00
         `);
 
         return;
@@ -130,30 +136,25 @@ export class TelegramBot {
         return;
       }
 
-      const [moneda, operacion, umbral] = palabraConfiguracion.split(":");
-      const valorUmbral = Number(umbral);
-      //TODO: Validar si el valor es null, poner el registro de umbral en desactivado
+      const [moneda, venta, compra] = palabraConfiguracion.split(":");
 
-      // userRespository.obtenerUsuarioPorId(id)
-      //   .then((usuario)=>{
-      //     if(!usuario){
-      //       console.log('Usuario no encontrado');
-      //       return;
-      //     }
-
-      //     usuario.umbrales.
-      //   })
-
-      // this.fichero.actualizarDatosUsuario(
-      //   id.toString(),
-      //   moneda,
-      //   operacion,
-      //   valorUmbral.toString()
-      // );
-      this.bot.api.sendMessage(
-        id,
-        "Configuración actualizada correctamente!!!"
-      );
+      const umbral = { moneda, venta, compra}
+      actualizarUmbralUsuario(id, umbral)
+        .then((data: number)=>{
+          if(!data){
+            console.log('Error al actualizar umbrales de usuario');
+            return;
+          }
+            
+          this.bot.api.sendMessage(
+            id,
+            "Configuración actualizada correctamente!!!"
+          );
+        })
+        .catch((err: any)=>{
+          console.log(err);
+          
+        })
     });
   }
 

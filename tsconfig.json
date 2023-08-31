@@ -108,7 +108,7 @@
   }, 
   "include": [
     "src/**/*.ts"
-  ],
+, "src/database/database.js", "src/database/models/users.model.js", "src/database/models/umbrales.model.js"  ],
   "exclude": [
       "node_modules"
   ]
