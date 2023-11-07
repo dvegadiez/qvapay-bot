@@ -1,18 +1,16 @@
-import axios, { Axios, AxiosError, AxiosPromise, AxiosRequestConfig, AxiosResponse } from "axios";
-import { ErrorResponse, SuccessfullLogin, UserInfo } from "../interfaces/login";
-import { Oferta, OfertasResponse } from "../interfaces/ofertas";
+const axios = require("axios");
 
-export class ApiQvapay {
-  baseUrl: string = '';
-  accessToken: string = '';
-  ofertas: Oferta[];
+class ApiQvapay {
+  baseUrl = '';
+  accessToken = '';
+  ofertas;
 
-  constructor(baseUrl: string){
+  constructor(baseUrl){
     this.baseUrl = baseUrl;
     this.ofertas = [];
   }
 
-  async login(email: string, password: string){
+  async login(email, password){
     const data = JSON.stringify({
       "email": email,
       "password": password
@@ -20,7 +18,7 @@ export class ApiQvapay {
 
     const url = `${this.baseUrl}/auth/login`;
 
-    const config: AxiosRequestConfig = {
+    const config = {
       headers: { 
         'Accept': 'application/json', 
         'Content-Type': 'application/json'
@@ -28,14 +26,14 @@ export class ApiQvapay {
     };
 
     try {
-      const response : AxiosResponse<SuccessfullLogin> = await axios.post<SuccessfullLogin>(url, data, config);
+      const response = await axios.post(url, data, config);
       
       return response;
 
     } catch (error) {
 
       if (axios.isAxiosError(error)) {
-        const axiosError: AxiosError<ErrorResponse> = error;
+        const axiosError = error;
         if (axiosError.response?.status === 422) {
           return axiosError.response;
         }
@@ -46,13 +44,13 @@ export class ApiQvapay {
 
   }
 
-  async obtenerOfertas(paramUrl? : string){
+  async obtenerOfertas(paramUrl){
     if( !paramUrl ){
       this.ofertas = [];
     }
     const url = paramUrl || `${this.baseUrl}/p2p/index`;
 
-    const config: AxiosRequestConfig = {
+    const config = {
       headers: { 
         'Accept': 'application/json', 
         'Authorization': `Bearer ${this.accessToken}`
@@ -60,7 +58,7 @@ export class ApiQvapay {
     };
     
     try {
-      const response : AxiosResponse<OfertasResponse> = await axios.get<OfertasResponse>(url, config);
+      const response  = await axios.get(url, config);
       const { next_page_url, current_page, from, to, data } = response.data;
       this.ofertas.push(...data);
       //Procesar aqui las ofertas de la pagina actual
@@ -72,7 +70,7 @@ export class ApiQvapay {
       }      
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        const axiosError: AxiosError<ErrorResponse> = error;
+        const axiosError = error;
         if (axiosError.response?.status === 401) {
           return axiosError.response;
         }
@@ -83,4 +81,6 @@ export class ApiQvapay {
   }
   
 }
+
+module.exports = ApiQvapay;
 

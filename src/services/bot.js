@@ -1,15 +1,12 @@
-import { Bot } from "grammy";
-import { Oferta } from "../interfaces/ofertas";
-import { User } from "grammy/types";
-import { error } from "console";
+const { Bot } = require("grammy");
 
-const { actualizarCrearUsuario, cambiarEstadoUsuario, obtenerUmbralesUsuario, actualizarUmbralUsuario } = require('./../database/services/user.service');
+const { actualizarCrearUsuario, cambiarEstadoUsuario, obtenerUmbralesUsuario, actualizarUmbralUsuario } = require('../database/services/user.service');
 
-export class TelegramBot {
-  token: string;
-  bot: Bot;
+class TelegramBot {
+  token = '';
+  bot = undefined;
 
-  constructor(token: string) {
+  constructor(token) {
 
     this.token = token;
     this.bot = new Bot(token);
@@ -24,7 +21,7 @@ export class TelegramBot {
     this.bot.start();
   }
 
-  esMensajeConfiguracionValido(msg: string) {
+  esMensajeConfiguracionValido(msg) {
     // Definimos la expresión regular para validar el formato
     const patron = /^(BANK_CUP|BANK_MLC):(null|[0-9]+(\.[0-9]+)?):((null|[0-9]+(\.[0-9]+)?))$/;
 
@@ -32,13 +29,13 @@ export class TelegramBot {
     return patron.test(msg);
   }
 
-  async setCommands(comandos: { command: string; description: string }[]) {
+  async setCommands(comandos) {
     // await this.bot.api.setMyCommands(comandos);
 
     // Envia mensaje de bienvenida al recibir el comando /start
     this.bot.command("start", (ctx) => {
       const { id } = ctx.chat;
-      const { first_name, last_name, username } = ctx.update.message!.from;
+      const { first_name, last_name, username } = ctx.update.message.from;
       
       const palabraSecreta = ctx.match;
       if (palabraSecreta !== process.env.BOT_SHARED_KEY) {
@@ -57,11 +54,11 @@ export class TelegramBot {
       };
 
       actualizarCrearUsuario(id, defaultUserConfig)
-        .then((data: any) =>{
+        .then((data) =>{
           console.log(`Usuario ${ data.firstName }(${data.id}) activado con éxito.`);
           this.bot.api.sendMessage(id, `Bienvenido ${data.firstName}, al bot de notificaciones de ofertas P2P de Qvapay (No oficial).`);
         })
-        .catch((err: any)=>{
+        .catch((err)=>{
           console.log(err);
         })
     });
@@ -69,16 +66,16 @@ export class TelegramBot {
     // Desactiva el id del usuario al recibir el comando /stop
     this.bot.command("stop", (ctx) => {
       const { id } = ctx.chat;
-      const { first_name, last_name, username } = ctx.update.message!.from;
+      const { first_name, last_name, username } = ctx.update.message.from;
 
-      cambiarEstadoUsuario(id, false).then((data: any)=>{
+      cambiarEstadoUsuario(id, false).then((data)=>{
         console.log(`Usuario ${ first_name }(${id}), deshabilitado con éxito`)
         
         if(data){
           this.bot.api.sendMessage(id, `Bye Bye, ${ first_name }`);
         }         
       })
-      .catch((err: any)=>{
+      .catch((err)=>{
         console.log(err);
         
       })
@@ -88,12 +85,12 @@ export class TelegramBot {
       const { id } = ctx.chat;
 
       obtenerUmbralesUsuario(id)
-        .then((data: any)=>{
+        .then((data)=>{
           
           const umbrales = data['Umbrals'];
           let mensaje = '';
 
-          umbrales?.forEach((umbral: any) =>{
+          umbrales?.forEach((umbral) =>{
             mensaje = mensaje.concat(
               `
                Moneda: ${umbral.moneda}
@@ -108,7 +105,7 @@ export class TelegramBot {
               : "Configuración de usuario no encontrada. Debe iniciar el bot!!!"
           );
         })
-        .catch((error: any)=> console.log(`Error al leer la configuración de usuario: ${error}`))
+        .catch((error)=> console.log(`Error al leer la configuración de usuario: ${error}`))
     });
 
     this.bot.command("config", (ctx) => {
@@ -139,7 +136,7 @@ export class TelegramBot {
 
       const umbral = { moneda, venta, compra}
       actualizarUmbralUsuario(id, umbral)
-        .then((data: number)=>{
+        .then((data)=>{
           if(!data){
             console.log('Error al actualizar umbrales de usuario');
             return;
@@ -150,14 +147,14 @@ export class TelegramBot {
             "Configuración actualizada correctamente!!!"
           );
         })
-        .catch((err: any)=>{
+        .catch((err)=>{
           console.log(err);
           
         })
     });
   }
 
-  enviarNotificacionOfertas(id: number, oferta: Oferta) {
+  enviarNotificacionOfertas(id, oferta) {
     const { uuid, type, coin, amount, receive } = oferta;
     const msg = `
       Oferta Qvapay
@@ -181,3 +178,5 @@ export class TelegramBot {
     this.bot.api.sendMessage(id, msg);
   }
 }
+
+module.exports = TelegramBot;

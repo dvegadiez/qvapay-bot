@@ -1,29 +1,26 @@
-import express, { Express, Request, Response } from "express";
-import dotenv from 'dotenv';
-import { ApiQvapay } from "./services/api-qvapay";
-import { ErrorResponse, SuccessfullLogin } from "./interfaces/login";
-import { TelegramBot } from "./services/bot";
-import { Oferta } from "./interfaces/ofertas";
+const express = require('express')
+const dotenv = require('dotenv');
 
+const ApiQvapay = require("./services/api-qvapay");
+const TelegramBot = require("./services/bot");
 
 const sequelize = require("./database/database");
+const { obtenerUsuariosActivos } = require('./database/services/user.service');
 const User = require("./database/models/users.model");
 const Umbral = require("./database/models/umbrales.model");
-
-const { obtenerUsuariosActivos } = require('./database/services/user.service');
 
 async function main() {
 
   const loginResponse = await api.login(email, password);  
 
   if(loginResponse.status !== 200){
-    const { error } = <ErrorResponse>loginResponse.data
+    const { error } = loginResponse.data
     console.log(`Error de autenticación. ${error}`);
     return;
   }
 
   console.log('Autenticación correcta');
-  const { accessToken } = <SuccessfullLogin> loginResponse.data;
+  const { accessToken } = loginResponse.data;
   api.accessToken = accessToken;
   
   await api.obtenerOfertas();
@@ -41,8 +38,8 @@ async function testDbConection(){
   }
 }
 
-export async function procesarOfertas (ofertas: Oferta[]) {
-  function filtrarOfertas(this: { config: Record<string, any> }, oferta: Oferta) {
+async function procesarOfertas (ofertas) {
+  function filtrarOfertas(oferta) {
     const { config } = this;
     const { coin, type, amount, receive } =  oferta;
     const ratio =  (+ receive)/ ( + amount ) ;
@@ -64,16 +61,16 @@ export async function procesarOfertas (ofertas: Oferta[]) {
   }
 
   obtenerUsuariosActivos()
-    .then((usuarios: any)=>{
+    .then((usuarios)=>{
       if(!usuarios.length)
         return;
 
-      usuarios.forEach((usuario: any) => {
+      usuarios.forEach((usuario) => {
         const umbrales = usuario['Umbrals'];
         const { id } = usuario;
-        const config: any = {};
+        const config = {};
 
-        umbrales.forEach((umbral: any) => {
+        umbrales.forEach((umbral) => {
           const { moneda, venta, compra, UserId} = umbral;
           config[moneda] = {};   
           config[moneda]['sell'] = parseFloat(venta);
@@ -84,7 +81,7 @@ export async function procesarOfertas (ofertas: Oferta[]) {
         ofertasFiltradas.forEach(oferta => telegramBot.enviarNotificacionOfertas(id, oferta))
       });
     })
-    .catch((err: any)=>{
+    .catch((err)=>{
       console.log(err);
       
     })  
@@ -94,16 +91,16 @@ export async function procesarOfertas (ofertas: Oferta[]) {
 
 dotenv.config();
 
-const baseUrl: string = 'https://qvapay.com/api';
+const baseUrl = 'https://qvapay.com/api';
 const api = new ApiQvapay(baseUrl);
-const email: string = <string> process.env.QVAPAY_USER;
-const password: string = <string> process.env.QVAPAY_PASSWORD;
-const telegramApiKey = <string> process.env.TELEGRAM_APIKEY;
+const email = process.env.QVAPAY_USER;
+const password = process.env.QVAPAY_PASSWORD;
+const telegramApiKey = process.env.TELEGRAM_APIKEY;
 
-const app: Express = express();
+const app = express();
 const port = process.env.PORT  ?? 8080;
 
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (req, res) => {
   res.send('Bienvenido al Bot de Ofertas P2P de Qvapay (no oficial)');
 });
 
