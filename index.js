@@ -1,13 +1,13 @@
 const express = require('express')
 const dotenv = require('dotenv');
 
-const ApiQvapay = require("./services/api-qvapay");
-const TelegramBot = require("./services/bot");
+const ApiQvapay = require("./src/services/api-qvapay");
+const TelegramBot = require("./src/services/bot");
 
-const sequelize = require("./database/database");
-const { obtenerUsuariosActivos } = require('./database/services/user.service');
-const User = require("./database/models/users.model");
-const Umbral = require("./database/models/umbrales.model");
+const sequelize = require("./src/database/database");
+const { obtenerUsuariosActivos } = require('./src/database/services/user.service');
+const User = require("./src/database/models/users.model");
+const Umbral = require("./src/database/models/umbrales.model");
 
 async function main() {
 
