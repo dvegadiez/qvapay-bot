@@ -1,13 +1,18 @@
 const { Bot } = require("grammy");
 
-const { actualizarCrearUsuario, cambiarEstadoUsuario, obtenerUmbralesUsuario, actualizarUmbralUsuario } = require('../database/services/user.service');
+const {
+  actualizarCrearUsuario,
+  cambiarEstadoUsuario,
+  obtenerUmbralesUsuario,
+  actualizarUmbralUsuario,
+  obtenerUsuariosActivos,
+} = require("../database/services/user.service");
 
 class TelegramBot {
-  token = '';
+  token = "";
   bot = undefined;
 
   constructor(token) {
-
     this.token = token;
     this.bot = new Bot(token);
 
@@ -23,7 +28,8 @@ class TelegramBot {
 
   esMensajeConfiguracionValido(msg) {
     // Definimos la expresión regular para validar el formato
-    const patron = /^(BANK_CUP|BANK_MLC):(null|[0-9]+(\.[0-9]+)?):((null|[0-9]+(\.[0-9]+)?))$/;
+    const patron =
+      /^(BANK_CUP|BANK_MLC):(null|[0-9]+(\.[0-9]+)?):((null|[0-9]+(\.[0-9]+)?))$/;
 
     // Verificamos si la msg coincide con el patrón
     return patron.test(msg);
@@ -36,31 +42,37 @@ class TelegramBot {
     this.bot.command("start", (ctx) => {
       const { id } = ctx.chat;
       const { first_name, last_name, username } = ctx.update.message.from;
-      
+
       const palabraSecreta = ctx.match;
       if (palabraSecreta !== process.env.BOT_SHARED_KEY) {
         return;
       }
 
       const defaultUserConfig = {
-        id, first_name, 
-        last_name, 
-        username, 
+        id,
+        first_name,
+        last_name,
+        username,
         activo: true,
         umbrales: [
-          { moneda: 'BANK_CUP', venta: 235, compra: null},
-          { moneda: 'BANK_MLC', venta: 1.11, compra: null}
-        ]
+          { moneda: "BANK_CUP", venta: 235, compra: null },
+          { moneda: "BANK_MLC", venta: 1.11, compra: null },
+        ],
       };
 
       actualizarCrearUsuario(id, defaultUserConfig)
-        .then((data) =>{
-          console.log(`Usuario ${ data.firstName }(${data.id}) activado con éxito.`);
-          this.bot.api.sendMessage(id, `Bienvenido ${data.firstName}, al bot de notificaciones de ofertas P2P de Qvapay (No oficial).`);
+        .then((data) => {
+          console.log(
+            `Usuario ${data.firstName}(${data.id}) activado con éxito.`
+          );
+          this.bot.api.sendMessage(
+            id,
+            `Bienvenido ${data.firstName}, al bot de notificaciones de ofertas P2P de Qvapay (No oficial).`
+          );
         })
-        .catch((err)=>{
+        .catch((err) => {
           console.log(err);
-        })
+        });
     });
 
     // Desactiva el id del usuario al recibir el comando /stop
@@ -68,36 +80,72 @@ class TelegramBot {
       const { id } = ctx.chat;
       const { first_name, last_name, username } = ctx.update.message.from;
 
-      cambiarEstadoUsuario(id, false).then((data)=>{
-        console.log(`Usuario ${ first_name }(${id}), deshabilitado con éxito`)
-        
-        if(data){
-          this.bot.api.sendMessage(id, `Bye Bye, ${ first_name }`);
-        }         
-      })
-      .catch((err)=>{
-        console.log(err);
-        
-      })
+      cambiarEstadoUsuario(id, false)
+        .then((data) => {
+          console.log(`Usuario ${first_name}(${id}), deshabilitado con éxito`);
+
+          if (data) {
+            this.bot.api.sendMessage(id, `Bye Bye, ${first_name}`);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
     });
 
     this.bot.command("get", (ctx) => {
       const { id } = ctx.chat;
+      const param = ctx.match;
+
+      if (param === "all") {
+        obtenerUsuariosActivos()
+          .then((usuarios) => {
+            if (!usuarios.length) return;
+
+            usuarios.forEach((usuario) => {
+              const umbrales = usuario["Umbrals"];
+              const { firstName, lastName } = usuario;
+              let mensaje = `Usuario: ${firstName} ${lastName}`;
+
+              umbrales.forEach((umbral) => {
+                const { moneda, venta, compra } = umbral;
+                mensaje = mensaje.concat(
+                  `
+                 Moneda: ${moneda}
+                 Venta: ${venta}, 
+                 Compra: ${compra}, 
+                 `
+                );
+
+              });
+              this.bot.api.sendMessage(
+                id,
+                umbrales
+                  ? mensaje
+                  : "Configuración de usuario no encontrada!!!"
+              );
+            });
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+        return;
+      }
 
       obtenerUmbralesUsuario(id)
-        .then((data)=>{
-          
-          const umbrales = data['Umbrals'];
-          let mensaje = '';
+        .then((data) => {
+          const umbrales = data["Umbrals"];
+          let mensaje = "";
 
-          umbrales?.forEach((umbral) =>{
+          umbrales?.forEach((umbral) => {
             mensaje = mensaje.concat(
               `
                Moneda: ${umbral.moneda}
                Venta: ${umbral.venta}, 
                Compra: ${umbral.compra}, 
-               `)
-              })
+               `
+            );
+          });
           this.bot.api.sendMessage(
             id,
             umbrales
@@ -105,7 +153,9 @@ class TelegramBot {
               : "Configuración de usuario no encontrada. Debe iniciar el bot!!!"
           );
         })
-        .catch((error)=> console.log(`Error al leer la configuración de usuario: ${error}`))
+        .catch((error) =>
+          console.log(`Error al leer la configuración de usuario: ${error}`)
+        );
     });
 
     this.bot.command("config", (ctx) => {
@@ -134,23 +184,22 @@ class TelegramBot {
 
       const [moneda, venta, compra] = palabraConfiguracion.split(":");
 
-      const umbral = { moneda, venta, compra}
+      const umbral = { moneda, venta, compra };
       actualizarUmbralUsuario(id, umbral)
-        .then((data)=>{
-          if(!data){
-            console.log('Error al actualizar umbrales de usuario');
+        .then((data) => {
+          if (!data) {
+            console.log("Error al actualizar umbrales de usuario");
             return;
           }
-            
+
           this.bot.api.sendMessage(
             id,
             "Configuración actualizada correctamente!!!"
           );
         })
-        .catch((err)=>{
+        .catch((err) => {
           console.log(err);
-          
-        })
+        });
     });
   }
 
