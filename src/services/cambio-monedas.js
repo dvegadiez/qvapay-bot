@@ -1,37 +1,33 @@
 const axios = require("axios");
 
 class TasaCambioApi {
-  baseUrl = 'https://www.cambiocup.com/api';
+  baseUrl = "https://www.cambiocup.com/api";
 
-  constructor(){
-  }
+  constructor() {}
 
-  async obtenerTasasCambio(){
-    
+  async obtenerTasasCambio() {
     const url = this.baseUrl;
 
     const config = {
-      headers: { 
-        'Accept': 'application/json', 
-      }   
+      headers: {
+        Accept: "application/json",
+      },
     };
-    
+
     try {
-      const response  = await axios.get(url, config);
+      const response = await axios.get(url, config);
       const { cupHistory, mlcHistory } = response.data;
       const [cupLast, ...cupRest] = cupHistory;
       const [mlcLast, ...mlcRest] = mlcHistory;
 
       return {
-        cupLast, 
-        mlcLast
-      }
+        cupLast,
+        mlcLast,
+      };
     } catch (error) {
-     
-      console.log(error);
+      throw error;
     }
   }
-  
 }
 
 module.exports = TasaCambioApi;

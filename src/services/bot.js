@@ -100,24 +100,28 @@ class TelegramBot {
 
       const tasaCambioApi = new TasaCambioApi();
 
-      tasaCambioApi.obtenerTasasCambio().then(({ cupLast, mlcLast }) => {
-        const mensaje = `
-           Tasas de cambio según QVAPAY
-           1 SQP: ${cupLast.value.toLocaleString("en-US", {
-             minimumFractionDigits: 0,
-             maximumFractionDigits: 2,
-           })} CUP
-           1 SQP: ${mlcLast.value.toLocaleString("en-US", {
-             minimumFractionDigits: 2,
-             maximumFractionDigits: 2,
-           })} MLC
-           1 MLC: ${(+cupLast.value / mlcLast.value).toLocaleString("en-US", {
-             minimumFractionDigits: 0,
-             maximumFractionDigits: 2,
-           })} CUP`;
+      tasaCambioApi.obtenerTasasCambio()
+        .then(({ cupLast, mlcLast }) => {
+          const mensaje = `
+            Tasas de cambio según QVAPAY
+            1 SQP: ${cupLast.value.toLocaleString("en-US", {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })} CUP
+            1 SQP: ${mlcLast.value.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })} MLC
+            1 MLC: ${(+cupLast.value / mlcLast.value).toLocaleString("en-US", {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })} CUP`;
 
-        this.bot.api.sendMessage(id, mensaje);
-      });
+          this.bot.api.sendMessage(id, mensaje);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
     });
 
     this.bot.command("get", (ctx) => {
