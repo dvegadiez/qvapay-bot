@@ -79,6 +79,34 @@ class ApiQvapay {
       throw error;
     }
   }
+
+  async obtenerTasasCambio( coin ){
+    const url = `${this.baseUrl}/p2p/completed_pairs_average?coin=${coin || 'BANK_CUP'}`;
+    const config = {
+      headers: { 
+        'Accept': 'application/json', 
+      }   
+    };
+
+    try {
+      const response  = await axios.get(url, config);
+      const { average_buy, average_sell, median_buy, median_sell } = response.data;
+
+      return {
+        average_buy, 
+        average_sell, 
+        median_buy, 
+        median_sell
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error;
+        console.log(axiosError.response);
+      }
+      
+      throw error;
+    }
+  }
   
 }
 

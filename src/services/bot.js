@@ -1,4 +1,5 @@
-const { Bot } = require("grammy");
+const { Bot, session } = require("grammy");
+const ApiQvapay = require("./api-qvapay");
 
 const {
   actualizarCrearUsuario,
@@ -17,15 +18,19 @@ class TelegramBot {
     this.token = token;
     this.bot = new Bot(token);
 
+    this.bot.use(session());
     this.setCommands([
       { command: "start", description: "Iniciar el bot" },
       { command: "stop", description: "Detener el bot" },
       { command: "config", description: "Configurar prámetros" },
       { command: "get", description: "Leer configuración" },
       { command: "tasas", description: "Obtener tasas de cambio" },
-    ]);
+    ]).then(()=> {
+      this.bot.start();
+    }).catch((error)=>{
+      console.log('Error al iniciar el bot: ', error)
+    })
 
-    this.bot.start();
   }
 
   esMensajeConfiguracionValido(msg) {
@@ -38,7 +43,11 @@ class TelegramBot {
   }
 
   async setCommands(comandos) {
-    // await this.bot.api.setMyCommands(comandos);
+    try {
+      await this.bot.api.setMyCommands(comandos);
+    } catch (error) {
+      console.log("Error al crear los comandos del bot!!!");
+    }
 
     // Envia mensaje de bienvenida al recibir el comando /start
     this.bot.command("start", (ctx) => {
@@ -97,30 +106,38 @@ class TelegramBot {
 
     this.bot.command("tasas", (ctx) => {
       const { id } = ctx.chat;
+      const coin = ctx.match;
 
-      const tasaCambioApi = new TasaCambioApi();
+      const baseUrl = "https://qvapay.com/api";
+      const api = new ApiQvapay(baseUrl);
 
-      tasaCambioApi.obtenerTasasCambio()
-        .then(({ cupLast, mlcLast }) => {
-          const mensaje = `
-            Tasas de cambio según QVAPAY
-            1 SQP: ${cupLast.value.toLocaleString("en-US", {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            })} CUP
-            1 SQP: ${mlcLast.value.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })} MLC
-            1 MLC: ${(+cupLast.value / mlcLast.value).toLocaleString("en-US", {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            })} CUP`;
+      api
+        .obtenerTasasCambio(coin)
+        .then(({ average_buy, average_sell, median_buy, median_sell }) => {
+          const msg = `
+          Tasas de Cambio P2P QVAPAY ${coin}
+          Promedio Ventas: ${average_sell.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+          Promedio Compras: ${average_buy.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+          Mediana Ventas: ${median_sell.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+          Mediana Compras: ${median_buy.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+          `;
 
-          this.bot.api.sendMessage(id, mensaje);
+          this.bot.api.sendMessage(id, msg);
         })
-        .catch((err) => {
-          console.log(err);
+        .catch((error) => {
+          console.log(error);
         });
     });
 
