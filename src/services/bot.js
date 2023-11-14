@@ -7,6 +7,7 @@ const {
   actualizarUmbralUsuario,
   obtenerUsuariosActivos,
 } = require("../database/services/user.service");
+const TasaCambioApi = require("./cambio-monedas");
 
 class TelegramBot {
   token = "";
@@ -21,6 +22,7 @@ class TelegramBot {
       { command: "stop", description: "Detener el bot" },
       { command: "config", description: "Configurar prámetros" },
       { command: "get", description: "Leer configuración" },
+      { command: "tasas", description: "Obtener tasas de cambio" },
     ]);
 
     this.bot.start();
@@ -93,6 +95,31 @@ class TelegramBot {
         });
     });
 
+    this.bot.command("tasas", (ctx) => {
+      const { id } = ctx.chat;
+
+      const tasaCambioApi = new TasaCambioApi();
+
+      tasaCambioApi.obtenerTasasCambio().then(({ cupLast, mlcLast }) => {
+        const mensaje = `
+           Tasas de cambio según QVAPAY
+           1 SQP: ${cupLast.value.toLocaleString("en-US", {
+             minimumFractionDigits: 0,
+             maximumFractionDigits: 2,
+           })} CUP
+           1 SQP: ${mlcLast.value.toLocaleString("en-US", {
+             minimumFractionDigits: 2,
+             maximumFractionDigits: 2,
+           })} MLC
+           1 MLC: ${(+cupLast.value / mlcLast.value).toLocaleString("en-US", {
+             minimumFractionDigits: 0,
+             maximumFractionDigits: 2,
+           })} CUP`;
+
+        this.bot.api.sendMessage(id, mensaje);
+      });
+    });
+
     this.bot.command("get", (ctx) => {
       const { id } = ctx.chat;
       const param = ctx.match;
@@ -116,13 +143,10 @@ class TelegramBot {
                  Compra: ${compra}, 
                  `
                 );
-
               });
               this.bot.api.sendMessage(
                 id,
-                umbrales
-                  ? mensaje
-                  : "Configuración de usuario no encontrada!!!"
+                umbrales ? mensaje : "Configuración de usuario no encontrada!!!"
               );
             });
           })
