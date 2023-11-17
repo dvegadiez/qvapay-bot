@@ -1,13 +1,11 @@
 const axios = require("axios");
 
 class ApiQvapay {
-  baseUrl = '';
-  accessToken = '';
-  ofertas;
 
-  constructor(baseUrl){
-    this.baseUrl = baseUrl;
+  constructor(){
+    this.baseUrl = 'https://qvapay.com/api';
     this.ofertas = [];
+    this.accessToken = '';
   }
 
   async login(email, password){
@@ -80,8 +78,8 @@ class ApiQvapay {
     }
   }
 
-  async obtenerTasasCambio( coin ){
-    const url = `${this.baseUrl}/p2p/completed_pairs_average?coin=${coin || 'BANK_CUP'}`;
+  async obtenerTasasCambio( coin = 'BANK_CUP'){
+    const url = `${this.baseUrl}/p2p/completed_pairs_average?coin=${coin }`;
     const config = {
       headers: { 
         'Accept': 'application/json', 

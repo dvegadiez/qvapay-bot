@@ -87,7 +87,7 @@ async function procesarOfertas (ofertas) {
 
 }
 
-const baseUrl = 'https://qvapay.com/api';
+const baseUrl = '';
 const api = new ApiQvapay(baseUrl);
 const email = process.env.QVAPAY_USER;
 const password = process.env.QVAPAY_PASSWORD;

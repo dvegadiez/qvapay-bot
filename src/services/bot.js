@@ -11,8 +11,6 @@ const {
 const TasaCambioApi = require("./cambio-monedas");
 
 class TelegramBot {
-  token = "";
-  bot = undefined;
 
   constructor(token) {
     this.token = token;
@@ -53,7 +51,6 @@ class TelegramBot {
     this.bot.command("start", (ctx) => {
       const { id } = ctx.chat;
       const { first_name, last_name, username } = ctx.update.message.from;
-
       const palabraSecreta = ctx.match;
       if (palabraSecreta !== process.env.BOT_SHARED_KEY) {
         return;
@@ -76,9 +73,11 @@ class TelegramBot {
           console.log(
             `Usuario ${data.firstName}(${data.id}) activado con éxito.`
           );
+          const msg = `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\r<b>¡Bienvenido a nuestro bot de Telegram!</b>\n\r<strong>Hola ${data.firstName}!</strong> Gracias por unirte a nuestro bot. Estamos <u>emocionados</u> de tenerte aquí.\n\r- Explora nuestras funciones.\n\r- No dudes en contactarnos si tienes alguna pregunta.\n\r¡Disfruta tu experiencia!`
           this.bot.api.sendMessage(
             id,
-            `Bienvenido ${data.firstName}, al bot de notificaciones de ofertas P2P de Qvapay (No oficial).`
+            msg, 
+            { parse_mode: "HTML" },
           );
         })
         .catch((err) => {
@@ -94,9 +93,9 @@ class TelegramBot {
       cambiarEstadoUsuario(id, false)
         .then((data) => {
           console.log(`Usuario ${first_name}(${id}), deshabilitado con éxito`);
-
           if (data) {
-            this.bot.api.sendMessage(id, `Bye Bye, ${first_name}`);
+            const msg = `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\rBye Bye, <b>${first_name}</b>`
+            this.bot.api.sendMessage(id, msg, { parse_mode: "HTML" },);
           }
         })
         .catch((err) => {
@@ -106,35 +105,28 @@ class TelegramBot {
 
     this.bot.command("tasas", (ctx) => {
       const { id } = ctx.chat;
-      const coin = ctx.match;
+      const coin = ctx.match || 'BANK_CUP';
 
-      const baseUrl = "https://qvapay.com/api";
-      const api = new ApiQvapay(baseUrl);
+      const api = new ApiQvapay();
 
       api
         .obtenerTasasCambio(coin)
         .then(({ average_buy, average_sell, median_buy, median_sell }) => {
-          const msg = `
-          Tasas de Cambio P2P QVAPAY ${coin}
-          Promedio Ventas: ${average_sell.toLocaleString("en-US", {
+          const msg = `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\r<b>Tasas de Cambio </b> <i>${coin}</i>\n\r<b>Promedio Ventas:</b> ${average_sell.toLocaleString("en-US", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-          })}
-          Promedio Compras: ${average_buy.toLocaleString("en-US", {
+          })}\n\r<b>Promedio Compras:</b> ${average_buy.toLocaleString("en-US", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-          })}
-          Mediana Ventas: ${median_sell.toLocaleString("en-US", {
+          })}\n\r<b>Mediana Ventas:</b> ${median_sell.toLocaleString("en-US", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-          })}
-          Mediana Compras: ${median_buy.toLocaleString("en-US", {
+          })}\n\r<b>Mediana Compras</b>: ${median_buy.toLocaleString("en-US", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-          })}
-          `;
+          })}`;
 
-          this.bot.api.sendMessage(id, msg);
+          this.bot.api.sendMessage(id, msg, {parse_mode: 'HTML'});
         })
         .catch((error) => {
           console.log(error);
@@ -153,21 +145,18 @@ class TelegramBot {
             usuarios.forEach((usuario) => {
               const umbrales = usuario["Umbrals"];
               const { firstName, lastName } = usuario;
-              let mensaje = `Usuario: ${firstName} ${lastName}`;
+              let mensaje = `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\r<b>Usuario:</b> ${firstName} ${lastName}\n\r`;
 
               umbrales.forEach((umbral) => {
                 const { moneda, venta, compra } = umbral;
                 mensaje = mensaje.concat(
-                  `
-                 Moneda: ${moneda}
-                 Venta: ${venta}, 
-                 Compra: ${compra}, 
-                 `
+                  `<b>Moneda:</b> ${moneda}\n\r<b>Venta:</b> ${venta},\n\r<b>Compra:</b> ${compra},\n\r`
                 );
               });
               this.bot.api.sendMessage(
                 id,
-                umbrales ? mensaje : "Configuración de usuario no encontrada!!!"
+                umbrales ? mensaje : "Configuración de usuario no encontrada!!!",
+                {parse_mode:'HTML'}
               );
             });
           })
@@ -180,22 +169,19 @@ class TelegramBot {
       obtenerUmbralesUsuario(id)
         .then((data) => {
           const umbrales = data["Umbrals"];
-          let mensaje = "";
+          let mensaje = `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\r`;
 
           umbrales?.forEach((umbral) => {
             mensaje = mensaje.concat(
-              `
-               Moneda: ${umbral.moneda}
-               Venta: ${umbral.venta}, 
-               Compra: ${umbral.compra}, 
-               `
+              `<b>Moneda:</b> ${umbral.moneda}\n\r<b>Venta:</b> ${umbral.venta},\n\r<b>Compra:</b> ${umbral.compra},\n\r`
             );
           });
           this.bot.api.sendMessage(
             id,
             umbrales
               ? mensaje
-              : "Configuración de usuario no encontrada. Debe iniciar el bot!!!"
+              : "Configuración de usuario no encontrada. Debe iniciar el bot!!!",
+            {parse_mode:"HTML"}  
           );
         })
         .catch((error) =>
@@ -209,17 +195,17 @@ class TelegramBot {
 
       if (!palabraConfiguracion) {
         ctx.reply(
-          `Para configurar los umbrales del bot, envía argumentos al comando con el siguiente formato:
-          /config BANK_MLC:venta:compra
-          Envía null si no quieres recibir notificaciones del alguna operación
-          `
-        );
-        ctx.reply(`
-        /config BANK_MLC:1.10:null
-        `);
-        ctx.reply(`
-        /config BANK_CUP:235.00:215.00
-        `);
+          `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\rPara configurar los umbrales del bot, envía argumentos al comando con el siguiente formato:\n\r/config BANK_MLC:venta:compra\n\rEnvía null si no quieres recibir notificaciones del alguna operación`, 
+          {parse_mode: "HTML"}
+        ).then(()=>{
+          return ctx.reply(`
+          /config BANK_MLC:1.10:null
+          `);
+        }).then(()=> {
+          ctx.reply(`
+          /config BANK_CUP:235:215
+          `);         
+        });
 
         return;
       } else if (!this.esMensajeConfiguracionValido(palabraConfiguracion)) {
