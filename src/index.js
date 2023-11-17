@@ -66,7 +66,7 @@ async function procesarOfertas (ofertas) {
 
       usuarios.forEach((usuario) => {
         const umbrales = usuario['Umbrals'];
-        const { id } = usuario;
+        const { id, firstName } = usuario;
         const config = {};
 
         umbrales.forEach((umbral) => {
@@ -77,7 +77,7 @@ async function procesarOfertas (ofertas) {
           
         });
         const ofertasFiltradas = ofertas.filter(filtrarOfertas, {config});
-        ofertasFiltradas.forEach(oferta => telegramBot.enviarNotificacionOfertas(id, oferta))
+        ofertasFiltradas.forEach(oferta => telegramBot.enviarNotificacionOfertas(id, oferta, firstName))
       });
     })
     .catch((err)=>{

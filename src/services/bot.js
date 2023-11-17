@@ -15,17 +15,20 @@ class TelegramBot {
   constructor(token) {
     this.token = token;
     this.bot = new Bot(token);
-
     this.bot.use(session());
+    this.botId = undefined;
+
     this.setCommands([
       { command: "start", description: "Iniciar el bot" },
       { command: "stop", description: "Detener el bot" },
       { command: "config", description: "Configurar prámetros" },
       { command: "get", description: "Leer configuración" },
       { command: "tasas", description: "Obtener tasas de cambio" },
-    ]).then(()=> {
-      this.bot.start();
-    }).catch((error)=>{
+    ])
+    .then(()=> this.bot.init())
+    .then(()=> this.botId = this.bot.botInfo.id)
+    .then(()=> this.bot.start())
+    .catch((error)=>{
       console.log('Error al iniciar el bot: ', error)
     })
 
@@ -73,7 +76,7 @@ class TelegramBot {
           console.log(
             `Usuario ${data.firstName}(${data.id}) activado con éxito.`
           );
-          const msg = `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\r<b>¡Bienvenido a nuestro bot de Telegram!</b>\n\r<strong>Hola ${data.firstName}!</strong> Gracias por unirte a nuestro bot. Estamos <u>emocionados</u> de tenerte aquí.\n\r- Explora nuestras funciones.\n\r- No dudes en contactarnos si tienes alguna pregunta.\n\r¡Disfruta tu experiencia!`
+          const msg = `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\r<b>¡Bienvenido a nuestro bot de Telegram!</b>\n\r<strong>Hola ${data.firstName}!</strong> Gracias por unirte a nuestro bot. Estamos <u>emocionados</u> de tenerte aquí.\n\r- Explora nuestras funciones.\n\r- No dudes en contactarnos si tienes alguna pregunta.\n\r¡Disfruta tu experiencia!`
           this.bot.api.sendMessage(
             id,
             msg, 
@@ -94,7 +97,7 @@ class TelegramBot {
         .then((data) => {
           console.log(`Usuario ${first_name}(${id}), deshabilitado con éxito`);
           if (data) {
-            const msg = `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\rBye Bye, <b>${first_name}</b>`
+            const msg = `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\rBye Bye, <b>${first_name}</b>`
             this.bot.api.sendMessage(id, msg, { parse_mode: "HTML" },);
           }
         })
@@ -112,7 +115,7 @@ class TelegramBot {
       api
         .obtenerTasasCambio(coin)
         .then(({ average_buy, average_sell, median_buy, median_sell }) => {
-          const msg = `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\r<b>Tasas de Cambio </b> <i>${coin}</i>\n\r<b>Promedio Ventas:</b> ${average_sell.toLocaleString("en-US", {
+          const msg = `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\r<b>Tasas de Cambio </b> <i>${coin}</i>\n\r<b>Promedio Ventas:</b> ${average_sell.toLocaleString("en-US", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}\n\r<b>Promedio Compras:</b> ${average_buy.toLocaleString("en-US", {
@@ -145,7 +148,7 @@ class TelegramBot {
             usuarios.forEach((usuario) => {
               const umbrales = usuario["Umbrals"];
               const { firstName, lastName } = usuario;
-              let mensaje = `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\r<b>Usuario:</b> ${firstName} ${lastName}\n\r`;
+              let mensaje = `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\r<b>Usuario:</b> ${firstName} ${lastName}\n\r`;
 
               umbrales.forEach((umbral) => {
                 const { moneda, venta, compra } = umbral;
@@ -169,7 +172,7 @@ class TelegramBot {
       obtenerUmbralesUsuario(id)
         .then((data) => {
           const umbrales = data["Umbrals"];
-          let mensaje = `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\r`;
+          let mensaje = `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\r`;
 
           umbrales?.forEach((umbral) => {
             mensaje = mensaje.concat(
@@ -195,7 +198,7 @@ class TelegramBot {
 
       if (!palabraConfiguracion) {
         ctx.reply(
-          `<a href="tg://user?id=6396584747">Bot Ofertas P2P Qvapay</a>\n\rPara configurar los umbrales del bot, envía argumentos al comando con el siguiente formato:\n\r/config BANK_MLC:venta:compra\n\rEnvía null si no quieres recibir notificaciones del alguna operación`, 
+          `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\rPara configurar los umbrales del bot, envía argumentos al comando con el siguiente formato:\n\r/config BANK_MLC:venta:compra\n\rEnvía null si no quieres recibir notificaciones del alguna operación`, 
           {parse_mode: "HTML"}
         ).then(()=>{
           return ctx.reply(`
@@ -234,28 +237,20 @@ class TelegramBot {
     });
   }
 
-  enviarNotificacionOfertas(id, oferta) {
+  enviarNotificacionOfertas(id, oferta, firstName) {
     const { uuid, type, coin, amount, receive } = oferta;
-    const msg = `
-      Oferta Qvapay
-    Tipo Operación: ${type === "sell" ? "Venta" : "Compra"}
-    Moneda: ${coin}
-    Cantidad: ${(+amount).toLocaleString("en-US", {
+    const msg = `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\r<b>Oferta Qvapay</b>\n\rTipo Operación: ${type === "sell" ? "Venta" : "Compra"}\n\rMoneda: ${coin}\n\rCantidad: ${(+amount).toLocaleString("en-US", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
-    })}
-    Importe: ${(+receive).toLocaleString("en-US", {
+    })}\n\rImporte: ${(+receive).toLocaleString("en-US", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
-    })}
-    Ratio: ${(+receive / +amount).toLocaleString("en-US", {
+    })}\n\rRatio: ${(+receive / +amount).toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    })}
-    Aplicar: https://qvapay.com/p2p/${uuid}
-    `;
-
-    this.bot.api.sendMessage(id, msg);
+    })}\n\rAplicar: https://qvapay.com/p2p/${uuid}`;
+    console.log(`Notificación enviada al usuario: ${firstName}`);
+    this.bot.api.sendMessage(id, msg, {parse_mode: "HTML", disable_web_page_preview: true});
   }
 }
 
