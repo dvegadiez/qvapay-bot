@@ -237,9 +237,10 @@ class TelegramBot {
     });
   }
 
-  enviarNotificacionOfertas(id, oferta, firstName) {
+  enviarNotificacionOfertas(id, oferta, firstName, goldenCheck) {
     const { uuid, type, coin, amount, receive } = oferta;
-    const msg = `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\r<b>Oferta Qvapay</b>\n\rTipo Operación: ${type === "sell" ? "Venta" : "Compra"}\n\rMoneda: ${coin}\n\rCantidad: ${(+amount).toLocaleString("en-US", {
+    const goldenCheckImg = '<tg-emoji emoji-id="5368324170671202286">⭐</tg-emoji>';
+    const msg = `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\r<b>Oferta Qvapay</b> ${goldenCheck ? goldenCheckImg: ''} \n\rTipo Operación: ${type === "sell" ? "Venta" : "Compra"}\n\rMoneda: ${coin}\n\rCantidad: ${(+amount).toLocaleString("en-US", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     })}\n\rImporte: ${(+receive).toLocaleString("en-US", {

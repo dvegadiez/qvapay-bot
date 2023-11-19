@@ -19,13 +19,11 @@ async function main() {
   }
 
   console.log('Autenticación correcta');
-  const { accessToken } = loginResponse.data;
+  const { accessToken, me } = loginResponse.data;
   api.accessToken = accessToken;
-  
   await api.obtenerOfertas();
   const ofertas = api.ofertas;
-
-  procesarOfertas(ofertas);
+  procesarOfertas(ofertas, me.golden_check);
 }
 
 async function testDbConection(){
@@ -37,7 +35,7 @@ async function testDbConection(){
   }
 }
 
-async function procesarOfertas (ofertas) {
+async function procesarOfertas (ofertas, goldenCheck) {
   function filtrarOfertas(oferta) {
     const { config } = this;
     const { coin, type, amount, receive } =  oferta;
@@ -77,7 +75,7 @@ async function procesarOfertas (ofertas) {
           
         });
         const ofertasFiltradas = ofertas.filter(filtrarOfertas, {config});
-        ofertasFiltradas.forEach(oferta => telegramBot.enviarNotificacionOfertas(id, oferta, firstName))
+        ofertasFiltradas.forEach(oferta => telegramBot.enviarNotificacionOfertas(id, oferta, firstName, goldenCheck))
       });
     })
     .catch((err)=>{
@@ -113,5 +111,5 @@ sequelize.sync({alter: true});
 const telegramBot = new TelegramBot(telegramApiKey);
 
 main();
-setInterval(main, 3 * 60 * 1000);
+setInterval(main, 1 * 60 * 1000);
 
