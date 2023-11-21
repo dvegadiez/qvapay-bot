@@ -207,7 +207,7 @@ class TelegramBot {
           `);
         }).then(()=> {
           ctx.reply(`
-          /config BANK_CUP:ratio:235:215:null:50
+          /config BANK_CUP:235:215:null:50
           `);         
         });
 
