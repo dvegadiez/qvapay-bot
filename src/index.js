@@ -54,6 +54,12 @@ async function procesarOfertas (ofertas, goldenCheck) {
         return false;
     }
 
+    if(config[coin]['maximo'] && amount > config[coin]['maximo'])
+      return false;
+
+    if(config[coin]['minimo'] && amount < config[coin]['minimo'])
+      return false;
+
     return true;
   }
 
@@ -68,11 +74,12 @@ async function procesarOfertas (ofertas, goldenCheck) {
         const config = {};
 
         umbrales.forEach((umbral) => {
-          const { moneda, venta, compra, UserId} = umbral;
+          const { moneda, venta, compra, UserId, cantidadMinima, cantidadMaxima} = umbral;
           config[moneda] = {};   
           config[moneda]['sell'] = parseFloat(venta);
           config[moneda]['buy'] = parseFloat(compra);
-          
+          config[moneda]['minimo'] = cantidadMinima;
+          config[moneda]['maximo'] = cantidadMaxima;
         });
         const ofertasFiltradas = ofertas.filter(filtrarOfertas, {config});
         ofertasFiltradas.forEach(oferta => telegramBot.enviarNotificacionOfertas(id, oferta, firstName, goldenCheck))

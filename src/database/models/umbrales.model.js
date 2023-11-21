@@ -25,10 +25,12 @@ Umbral.init({
   compra: {
     type: DataTypes.FLOAT,
   },
-  // activo: {
-  //   type: DataTypes.BOOLEAN,
-  //   defaultValue: true
-  // }
+  cantidadMinima: {
+      type: DataTypes.FLOAT,
+  },
+  cantidadMaxima: {
+      type: DataTypes.FLOAT,
+  }
 }, {
   // Other model options go here
   sequelize, // We need to pass the connection instance

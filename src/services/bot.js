@@ -37,7 +37,7 @@ class TelegramBot {
   esMensajeConfiguracionValido(msg) {
     // Definimos la expresión regular para validar el formato
     const patron =
-      /^(BANK_CUP|BANK_MLC):(null|[0-9]+(\.[0-9]+)?):((null|[0-9]+(\.[0-9]+)?))$/;
+      /^(BANK_CUP|BANK_MLC):(null|[0-9]+(\.[0-9]+)?):(null|[0-9]+(\.[0-9]+)?):(null|[0-9]+(\.[0-9]+)?):((null|[0-9]+(\.[0-9]+)?))$/;
 
     // Verificamos si la msg coincide con el patrón
     return patron.test(msg);
@@ -66,8 +66,8 @@ class TelegramBot {
         username,
         activo: true,
         umbrales: [
-          { moneda: "BANK_CUP", venta: 235, compra: null },
-          { moneda: "BANK_MLC", venta: 1.11, compra: null },
+          { moneda: "BANK_CUP", venta: 235, compra: null, cantidadMinima: null, cantidadMaxima: null },
+          { moneda: "BANK_MLC", venta: 1.11, compra: null, cantidadMinima: null, cantidadMaxima: null },
         ],
       };
 
@@ -151,9 +151,9 @@ class TelegramBot {
               let mensaje = `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\r<b>Usuario:</b> ${firstName} ${lastName}\n\r`;
 
               umbrales.forEach((umbral) => {
-                const { moneda, venta, compra } = umbral;
+                const { moneda, venta, compra, cantidadMinima, cantidadMaxima } = umbral;
                 mensaje = mensaje.concat(
-                  `<b>Moneda:</b> ${moneda}\n\r<b>Venta:</b> ${venta},\n\r<b>Compra:</b> ${compra},\n\r`
+                  `<b>Moneda:</b> ${moneda}\n\r<b>Venta:</b> ${venta},\n\r<b>Compra:</b> ${compra},\n\r<b>Mínimo:</b> ${cantidadMinima},\n\r<b>Máximo:</b> ${cantidadMaxima},\n\r`
                 );
               });
               this.bot.api.sendMessage(
@@ -175,9 +175,10 @@ class TelegramBot {
           let mensaje = `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\r`;
 
           umbrales?.forEach((umbral) => {
+            const { moneda, venta, compra, cantidadMinima, cantidadMaxima } = umbral;
             mensaje = mensaje.concat(
-              `<b>Moneda:</b> ${umbral.moneda}\n\r<b>Venta:</b> ${umbral.venta},\n\r<b>Compra:</b> ${umbral.compra},\n\r`
-            );
+              `<b>Moneda:</b> ${moneda}\n\r<b>Venta:</b> ${venta},\n\r<b>Compra:</b> ${compra},\n\r<b>Mínimo:</b> ${cantidadMinima},\n\r<b>Máximo:</b> ${cantidadMaxima},\n\r`
+              );
           });
           this.bot.api.sendMessage(
             id,
@@ -198,15 +199,15 @@ class TelegramBot {
 
       if (!palabraConfiguracion) {
         ctx.reply(
-          `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\rPara configurar los umbrales del bot, envía argumentos al comando con el siguiente formato:\n\r/config BANK_MLC:venta:compra\n\rEnvía null si no quieres recibir notificaciones del alguna operación`, 
+          `<a href="tg://user?id=${this.botId}">Bot Ofertas P2P Qvapay</a>\n\rPara configurar los umbrales del bot, envía argumentos al comando con el siguiente formato:\n\r/config BANK_MLC:precioVenta:precioCompra:cantidadMinima:cantidadMaxima\n\rEnvía null si no quieres recibir notificaciones del alguna operación o para ignorar el límite de cantidad`, 
           {parse_mode: "HTML"}
         ).then(()=>{
           return ctx.reply(`
-          /config BANK_MLC:1.10:null
+          /config BANK_MLC:1.10:null:10:100
           `);
         }).then(()=> {
           ctx.reply(`
-          /config BANK_CUP:235:215
+          /config BANK_CUP:ratio:235:215:null:50
           `);         
         });
 
@@ -216,9 +217,9 @@ class TelegramBot {
         return;
       }
 
-      const [moneda, venta, compra] = palabraConfiguracion.split(":");
+      const [moneda,  venta, compra, cantidadMinima, cantidadMaxima] = palabraConfiguracion.split(":");
 
-      const umbral = { moneda, venta, compra };
+      const umbral = { moneda, venta, compra, cantidadMinima, cantidadMaxima };
       actualizarUmbralUsuario(id, umbral)
         .then((data) => {
           if (!data) {

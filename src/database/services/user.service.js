@@ -71,9 +71,9 @@ async function obtenerUmbralesUsuario(id) {
 
 async function actualizarUmbralUsuario(id, valoresUmbral) {
   try {
-    const {moneda, venta, compra} = valoresUmbral;
+    const {moneda, venta, compra, cantidadMinima, cantidadMaxima} = valoresUmbral;
     
-    return await Umbral.update({venta: isNaN(venta) ? null : venta, compra: isNaN(compra) ? null : compra}, { where: { [Op.and]: {UserId: id, moneda}}})
+    return await Umbral.update({venta: isNaN(venta) ? null : venta, compra: isNaN(compra) ? null : compra, cantidadMinima, cantidadMaxima}, { where: { [Op.and]: {UserId: id, moneda}}})
     
   } catch (error) {
     console.log(error);  
