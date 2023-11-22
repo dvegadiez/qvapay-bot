@@ -39,25 +39,27 @@ async function procesarOfertas (ofertas, goldenCheck) {
   function filtrarOfertas(oferta) {
     const { config } = this;
     const { coin, type, amount, receive } =  oferta;
-    const ratio =  (+ receive)/ ( + amount ) ;
+    const ratio =  +(((+ receive)/ ( + amount )).toFixed(2)) ;
 
     if (!(config[coin]?.[type])) {
         return false;
     }
+
+    const umbral = config[coin][type];
     
     // Verificar el umbral de acuerdo a la operación
-    if (type === 'sell' && !isNaN(config[coin][type]) && ratio > config[coin][type]) {
+    if (type === 'sell' && !isNaN(umbral) && ratio > +(umbral.toFixed(2))) {
         return false;
     }
     
-    if (type === 'buy' && !isNaN(config[coin][type]) && ratio < config[coin][type]) {
+    if (type === 'buy' && !isNaN(umbral) && ratio < +(umbral.toFixed(2))) {
         return false;
     }
 
-    if(config[coin]['maximo'] && amount > config[coin]['maximo'])
+    if(ratio == +(umbral.toFixed(2)) && (config[coin]['maximo'] && amount > config[coin]['maximo']))
       return false;
 
-    if(config[coin]['minimo'] && amount < config[coin]['minimo'])
+    if(ratio == +(umbral.toFixed(2)) && (config[coin]['minimo'] && amount < config[coin]['minimo']))
       return false;
 
     return true;
