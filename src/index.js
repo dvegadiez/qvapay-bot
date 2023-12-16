@@ -120,5 +120,5 @@ sequelize.sync({alter: true});
 const telegramBot = new TelegramBot(telegramApiKey);
 
 main();
-setInterval(main, 1 * 60 * 1000);
+setInterval(main, .5 * 60 * 1000);
 
